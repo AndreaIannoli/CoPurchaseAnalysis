@@ -2,7 +2,7 @@ package copurchase
 
 import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
 
-object RddCoPurchaseAnalysis {
+object CoPurchase {
   def main(args: Array[String]): Unit = {
     // Usage:
     //   spark-submit --class copurchase.RddCoPurchaseAnalysis your-jar.jar <inputPath> <outputPath>
@@ -10,17 +10,17 @@ object RddCoPurchaseAnalysis {
     // args(0) = input path (CSV)
     // args(1) = output path (folder for CSV output)
 
-    if (args.length < 2) {
-      System.err.println("Usage: RddCoPurchaseAnalysis <inputPath> <outputPath>")
-      System.exit(1)
-    }
-
-    val inputPath  = args(0)
-    val outputPath = args(1)
+    // val inputPath  = args(0)
+    // val outputPath = args(1)
+    
+    val number_of_cores = java.lang.Runtime.getRuntime.availableProcessors();
+    val bucket_name = "bucket_copurchase"
+    val inputPath = "gs://" + bucket_name + "/order_products.csv"
+    val outputPath = "gs://" + bucket_name + "/output" + number_of_cores.toString();
 
     // Configure Spark: set parallelism, use Kryo serializer, etc.
     val conf = new SparkConf()
-      .setAppName("CoPurchaseRDD")
+      .setAppName("CoPurchase")
       .set("spark.default.parallelism", "400")
       // Use Kryo serializer (slightly more efficient than Java serialization)
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
@@ -63,9 +63,10 @@ object RddCoPurchaseAnalysis {
       }
       pairs
     }
-
+    // val number_of_executors = sc.getConf.get("spark.executor.instances").toInt
     // Optionally, re-partition before the reduce step
-    val partitionedPairs = pairRDD.partitionBy(new HashPartitioner(500))
+    // val partitionedPairs = pairRDD.partitionBy(new HashPartitioner(number_of_executors * number_of_cores.toInt * 2));
+    val partitionedPairs = pairRDD.partitionBy(new HashPartitioner(500));
 
     // Sum up how many orders each pair appears in
     val coOccurrenceCounts = partitionedPairs.reduceByKey(_ + _)
