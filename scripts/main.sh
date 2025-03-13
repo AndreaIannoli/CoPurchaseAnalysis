@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Variables
 CLUSTER_NAME="cluster-copurchase"
-REGION="europe-central2"
+REGION="europe-west1"
 JAR_PATH="gs://bucket_copurchase/orderaffinity_2.12-0.1.0.jar"
 
 # ----------------------------- RUN WITH A SINGLE NODE -----------------------------
@@ -12,8 +12,9 @@ JAR_PATH="gs://bucket_copurchase/orderaffinity_2.12-0.1.0.jar"
 echo "Creating single-node cluster: ${CLUSTER_NAME}..."
 gcloud dataproc clusters create "${CLUSTER_NAME}" \
   --region "${REGION}" \
+  --zone "europe-west1-b" \
   --single-node \
-  --master-boot-disk-size "240" \
+  --master-boot-disk-size "340" \
   --master-machine-type "n2-standard-4"
 
 # Submit the Spark job on the single-node cluster
@@ -21,7 +22,8 @@ echo "Submitting Spark job on cluster: ${CLUSTER_NAME}..."
 gcloud dataproc jobs submit spark \
   --cluster "${CLUSTER_NAME}" \
   --region "${REGION}" \
-  --jar "${JAR_PATH}"
+  --jar "${JAR_PATH}" \
+  --properties=spark.driver.memory=6g,spark.executor.memory=4g,spark.executor.instances=1,spark.executor.cores=2
 
 # ----------------------------- RUN WITH TWO WORKER NODES -----------------------------
 
@@ -39,9 +41,10 @@ NEW_CLUSTER_NAME="${CLUSTER_NAME}-${NUM_WORKERS}"
 echo "Creating new cluster: ${NEW_CLUSTER_NAME} with ${NUM_WORKERS} worker nodes..."
 gcloud dataproc clusters create "${NEW_CLUSTER_NAME}" \
   --region "${REGION}" \
+  --zone "europe-west1-b" \
   --num-workers "${NUM_WORKERS}" \
-  --master-boot-disk-size "240" \
-  --worker-boot-disk-size "240" \
+  --master-boot-disk-size "100" \
+  --worker-boot-disk-size "100" \
   --master-machine-type "n2-standard-4" \
   --worker-machine-type "n2-standard-2"
 
@@ -50,7 +53,10 @@ echo "Submitting Spark job on cluster: ${NEW_CLUSTER_NAME}..."
 gcloud dataproc jobs submit spark \
   --cluster "${NEW_CLUSTER_NAME}" \
   --region "${REGION}" \
-  --jar "${JAR_PATH}"
+  --jar "${JAR_PATH}" \
+  --properties=spark.driver.memory=4g,spark.executor.memory=4g,spark.executor.instances=2,spark.executor.cores=2
+  
+
 
 # ----------------------------- RUN WITH THREE WORKER NODES -----------------------------
 
@@ -66,4 +72,5 @@ echo "Submitting Spark job on updated cluster: ${NEW_CLUSTER_NAME}..."
 gcloud dataproc jobs submit spark \
   --cluster "${NEW_CLUSTER_NAME}" \
   --region "${REGION}" \
-  --jar "${JAR_PATH}"
+  --jar "${JAR_PATH}" \
+  --properties=spark.driver.memory=4g,spark.executor.memory=4g,spark.executor.instances=3,spark.executor.cores=2

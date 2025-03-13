@@ -12,11 +12,6 @@ object CoPurchase {
 
     // val inputPath  = args(0)
     // val outputPath = args(1)
-    
-    val number_of_cores = java.lang.Runtime.getRuntime.availableProcessors();
-    val bucket_name = "bucket_copurchase"
-    val inputPath = "gs://" + bucket_name + "/order_products.csv"
-    val outputPath = "gs://" + bucket_name + "/output" + number_of_cores.toString();
 
     // Configure Spark: set parallelism, use Kryo serializer, etc.
     val conf = new SparkConf()
@@ -28,6 +23,12 @@ object CoPurchase {
       // .registerKryoClasses(Array(classOf[(Int, Int)], classOf[(Int, Iterable[Int])]))
 
     val sc = new SparkContext(conf)
+
+    val number_of_executors = sc.getConf.get("spark.executor.instances").toInt;
+    val number_of_cores = java.lang.Runtime.getRuntime.availableProcessors();
+    val bucket_name = "bucket_copurchase"
+    val inputPath = "gs://" + bucket_name + "/order_products.csv"
+    val outputPath = "gs://" + bucket_name + "/output" + number_of_executors.toString();
 
     // Measure start time
     val startTime = System.currentTimeMillis()
@@ -63,10 +64,9 @@ object CoPurchase {
       }
       pairs
     }
-    // val number_of_executors = sc.getConf.get("spark.executor.instances").toInt
     // Optionally, re-partition before the reduce step
     // val partitionedPairs = pairRDD.partitionBy(new HashPartitioner(number_of_executors * number_of_cores.toInt * 2));
-    val partitionedPairs = pairRDD.partitionBy(new HashPartitioner(500));
+    val partitionedPairs = pairRDD.partitionBy(new HashPartitioner(number_of_cores * number_of_executors * 3));
 
     // Sum up how many orders each pair appears in
     val coOccurrenceCounts = partitionedPairs.reduceByKey(_ + _)
